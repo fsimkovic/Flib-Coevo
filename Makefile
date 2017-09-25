@@ -15,8 +15,8 @@ clean:
 Flib:			$(SRC)/slink.h $(SRC)/jacobi.h $(SRC)/Flib.o $(SRC)/coordcol_FS2.o $(SRC)/super4.o $(SRC)/jacobi.o $(SRC)/sparse.o
 			$(CC) $(CFLAGS) $(SRC)/Flib.o $(SRC)/coordcol_FS2.o $(SRC)/super4.o $(SRC)/jacobi.o $(SRC)/sparse.o -lm -o $(BIN)/Flib
 
-Flib_Enrich:		$(SRC)/slink.h $(SRC)/jacobi.h main_FS4.o $(SRC)/coordcol_FS2.o $(SRC)/super4.o $(SRC)/jacobi.o
-			$(CC) main_FS4.o $(SRC)/coordcol_FS2.o $(SRC)/super4.o $(SRC)/jacobi.o -Wall -O2 -lm -o $(BIN)/Flib_Enrich 
+Flib_Enrich:		$(SRC)/slink.h $(SRC)/jacobi.h $(SRC)/main_FS4.o $(SRC)/coordcol_FS2.o $(SRC)/super4.o $(SRC)/jacobi.o
+			$(CC) $(SRC)/main_FS4.o $(SRC)/coordcol_FS2.o $(SRC)/super4.o $(SRC)/jacobi.o -Wall -O2 -lm -o $(BIN)/Flib_Enrich 
 
 LibValidator:		$(SRC)/slink.h $(SRC)/jacobi.h $(SRC)/coordcol_FS2.o $(SRC)/super4.o $(SRC)/LibValidator.o 
 			$(CC) $(CFLAGS) $(SRC)/LibValidator.o $(SRC)/coordcol_FS2.o $(SRC)/super4.o $(SRC)/jacobi.o $(SRC)/sparse.o -lm -o $(BIN)/LibValidator

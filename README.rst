@@ -13,11 +13,9 @@ and type:
 
 .. code:: bash
    
-   $> cd src
    $> make
-   $> make install
 
-This will generate executables in ``bin/``.
+This will generate executables in ``./bin/``.
 
 
 2. DEPENDENCIES
