@@ -36,7 +36,9 @@ def generate_command_line_interface():
 
 
 def extract_data_from_flib_line(line):
-    pdb, chain, start, end, seq, _, _, _, length, _, _, _, score = line.strip().split()
+    line = line.strip().split()
+    pdb, chain, start, end, seq = line[:5]
+    length, score = line[8], line[-1]
     return pdb.lower(), chain, int(start), int(end), seq, int(length), float(score)
 
 
@@ -112,6 +114,7 @@ def main():
 
     fragment_entries = []
     for lib_file in args.input:
+        tmp_fragment_entries = []
         for fragl in open(lib_file, 'r'):
             if not fragl.strip():
                 continue
@@ -123,11 +126,14 @@ def main():
                                          fragment_pdb + "_{}.pdb".format(fragment_sequence))
             entry = [structure_file, fragment_file, fragment_chain,
                      fragment_start, fragment_end, fragment_sequence]
-            fragment_entries += [(fragment_score, entry)]
+            tmp_fragment_entries += [(fragment_score, entry)]
 
-    if args.fragment_number > 0:
-        fragment_entries = sorted(fragment_entries, key=lambda x: x[0])
-        fragment_entries = fragment_entries[:args.fragment_number]
+        tmp_fragment_entries = sorted(tmp_fragment_entries, key=lambda x: x[0])
+        if args.fragment_number > 0:
+            fragment_entries.extend(
+                tmp_fragment_entries[:args.fragment_number])
+        else:
+            fragment_entries.extend(tmp_fragment_entries)
 
     sys.stdout.write("Extracting a total of %d fragments ...\n" %
                      len(fragment_entries))
