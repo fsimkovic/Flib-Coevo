@@ -18,10 +18,15 @@ import tempfile
 import warnings
 warnings.simplefilter("ignore")
 
+SIDECHAIN_TREATMENTS = ["polyala", "allatom"]
+
 
 def generate_command_line_interface():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-s", dest="side_chain_treatment", nargs="+",
+                        default=SIDECHAIN_TREATMENTS,
+                        help="Side-chains to be kept")
     parser.add_argument("-n", dest="fragment_number", default=0,
                         type=int, help="Top-N fragments by Flib score [0 means all]")
     parser.add_argument("-t", dest="threads", default=1,
@@ -43,7 +48,13 @@ def extract_data_from_flib_line(line):
 
 
 def extract_fragment_coordinates(fragment_entry):
-    structure_file, fragment_file, fragment_chain, relative_fragment_start, relative_fragment_end, fragment_sequence \
+    structure_file, \
+        fragment_file, \
+        fragment_chain, \
+        relative_fragment_start, \
+        relative_fragment_end, \
+        fragment_sequence, \
+        sidechain_treatment \
         = fragment_entry
 
     structure = read_structure_file(structure_file)
@@ -63,7 +74,7 @@ def extract_fragment_coordinates(fragment_entry):
         absolute_fragment_start = pep[relative_fragment_start - offset].id[1]
         absolute_fragment_end = pep[relative_fragment_end - offset].id[1]
     except:
-        sys.stderr.write("Error extrating fragment: %s\n" % fragment_file)
+        print("Error extracting fragment: %s\n" % fragment_file)
         return
 
     residues_to_keep = range(absolute_fragment_start,
@@ -74,11 +85,21 @@ def extract_fragment_coordinates(fragment_entry):
                 for residue in chain:
                     if int(residue.id[1]) not in residues_to_keep:
                         structure[model.id][chain.id].detach_child(residue.id)
+                    elif sidechain_treatment == "polyala":
+                        for atom in residue:
+                            if atom.name not in ["C", "N", "O", "CA", "CB"]:
+                                structure[model.id][chain.id][residue.id].detach_child(
+                                    atom.id)
+
             else:
                 structure[model.id].detach_child(chain.id)
 
     save_fragment_file(fragment_file, structure)
-    validate_fragment_coords(fragment_file, fragment_sequence)
+    if not valid_fragment_coords(fragment_file, fragment_sequence):
+        print("Fragment file invalid - %s" % fragment_file)
+        os.remove(fragment_file)
+    else:
+        assert os.path.isfile(fragment_file)
 
 
 def read_structure_file(structure_file):
@@ -92,16 +113,18 @@ def save_fragment_file(fragment_f, structure):
     s.save(fragment_f)
 
 
-def validate_fragment_coords(fragment_f, fragment_seq):
+def valid_fragment_coords(fragment_f, fragment_seq):
     with open(fragment_f, "r") as f_in:
-        sequences = list(Bio.SeqIO.parse(f_in, "pdb-atom"))
+        try:
+            sequences = list(Bio.SeqIO.parse(f_in, "pdb-atom"))
+        except KeyError:
+            return False
         written_seq = str(sequences[0].seq).replace("X", "")
         if len(sequences) > 1:
-            sys.stderr.write("More than one sequence written ...\n")
+            return False
         elif written_seq != fragment_seq:
-            sys.stderr.write("Sequences do not match ...\n")
-            sys.stderr.write(fragment_seq + "\n")
-            sys.stderr.write(written_seq + "\n")
+            return False
+        return True
 
 
 def main():
@@ -118,15 +141,28 @@ def main():
         for fragl in open(lib_file, 'r'):
             if not fragl.strip():
                 continue
-            fragment_pdb, fragment_chain, fragment_start, \
-                fragment_end, fragment_sequence, fragment_length, fragment_score \
+
+            fragment_pdb, \
+                fragment_chain, \
+                fragment_start, \
+                fragment_end, \
+                fragment_sequence, \
+                fragment_length, \
+                fragment_score \
                 = extract_data_from_flib_line(fragl)
+
             structure_file = os.path.join(args.database, fragment_pdb + '.pdb')
-            fragment_file = os.path.join(args.output,
-                                         fragment_pdb + "_{}.pdb".format(fragment_sequence))
-            entry = [structure_file, fragment_file, fragment_chain,
-                     fragment_start, fragment_end, fragment_sequence]
-            tmp_fragment_entries += [(fragment_score, entry)]
+
+            for sidechain in args.side_chain_treatment:
+                assert sidechain in SIDECHAIN_TREATMENTS
+                fragment_name = "{}_{}_{}.pdb".format(fragment_pdb,
+                                                      fragment_sequence,
+                                                      sidechain)
+                fragment_file = os.path.join(args.output, fragment_name)
+                entry = [structure_file, fragment_file, fragment_chain,
+                         fragment_start, fragment_end, fragment_sequence,
+                         sidechain]
+                tmp_fragment_entries += [(fragment_score, entry)]
 
         tmp_fragment_entries = sorted(tmp_fragment_entries, key=lambda x: x[0])
         if args.fragment_number > 0:
