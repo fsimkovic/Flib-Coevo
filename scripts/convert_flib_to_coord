@@ -155,9 +155,10 @@ def main():
 
             for sidechain in args.side_chain_treatment:
                 assert sidechain in SIDECHAIN_TREATMENTS
-                fragment_name = "{}_{}_{}.pdb".format(fragment_pdb,
-                                                      fragment_sequence,
-                                                      sidechain)
+                fragment_name = "{}{}_{}_{}.pdb".format(fragment_pdb,
+                                                        fragment_chain,
+                                                        fragment_sequence,
+                                                        sidechain)
                 fragment_file = os.path.join(args.output, fragment_name)
                 entry = [structure_file, fragment_file, fragment_chain,
                          fragment_start, fragment_end, fragment_sequence,
